@@ -18,7 +18,13 @@ func GetDatabaseConn(url string) *pgx.Conn {
 }
 
 func RetrieveDataFromDatabase(conn *pgx.Conn, rowsCount int) (map[int]map[string]bool, map[string]bool) {
-	rows, err := conn.Query(context.Background(), "SELECT question_id, tag FROM question_tags ORDER BY question_id LIMIT $1", rowsCount)
+	var rows pgx.Rows
+	var err error
+	if rowsCount == -1 {
+		rows, err = conn.Query(context.Background(), "SELECT question_id, tag FROM question_tags")
+	} else {
+		rows, err = conn.Query(context.Background(), "SELECT question_id, tag FROM question_tags ORDER BY question_id LIMIT $1", rowsCount)
+	}
 	if err != nil {
 		fmt.Println("Query was not sucessfull:", err)
 		os.Exit(1)
