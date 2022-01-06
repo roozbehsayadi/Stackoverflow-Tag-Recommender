@@ -2,3 +2,9 @@
 
 This project is written to recommend tags based on a provided one.
 
+## Running the Project
+
+- Create a database with name "stackoverflow\_recommender" on postgresql.
+- Run migration files with `migrate.sh` file. See the file's content for additional information.
+- Dump data in database with `loaddata.sh` script.
+
