@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"os"
 	"sort"
+	"stackoverflow-recommender/internal"
 	"stackoverflow-recommender/internal/postgres"
 	"stackoverflow-recommender/internal/similarity"
 	"sync"
@@ -18,25 +18,7 @@ func main() {
 	conn := postgres.GetDatabaseConn(pgxUrl)
 	defer conn.Close(context.Background())
 
-	rows, err := conn.Query(context.Background(), "SELECT question_id, tag FROM question_tags ORDER BY question_id LIMIT 500")
-	if err != nil {
-		fmt.Println("Query was not sucessfull: ", err)
-		os.Exit(1)
-	}
-	var question_id int
-	var tag string
-
-	questions := make(map[int]map[string]bool)
-	allTags := make(map[string]bool)
-
-	for rows.Next() {
-		rows.Scan(&question_id, &tag)
-		allTags[tag] = true
-		if _, ok := questions[question_id]; !ok {
-			questions[question_id] = make(map[string]bool)
-		}
-		questions[question_id][tag] = true
-	}
+	questions, allTags := postgres.RetrieveDataFromDatabase(conn, 100)
 
 	similarity.InitData(questions)
 
@@ -57,16 +39,17 @@ func main() {
 	}()
 
 	res := make(chan (similarity.TagSimilarity))
-	var wg, wg2 sync.WaitGroup
+	var calculationsWaitGroup, appendResultsWaitGroup sync.WaitGroup
 
 	for i := 0; i < 8; i++ {
-		wg.Add(1)
-		go similarity.GetSimilarities(allTagsChan, res, &wg)
+		calculationsWaitGroup.Add(1)
+		go similarity.GetSimilarities(allTagsChan, res, &calculationsWaitGroup)
 	}
+
 	results := []similarity.TagSimilarity{}
-	wg2.Add(1)
+	appendResultsWaitGroup.Add(1)
 	go func() {
-		defer wg2.Done()
+		defer appendResultsWaitGroup.Done()
 		for result := range res {
 			results = append(results, result)
 			if rand.Int()%1000 == 0 {
@@ -76,33 +59,17 @@ func main() {
 			}
 		}
 	}()
-	wg.Wait()
+	calculationsWaitGroup.Wait()
 	close(res)
-	wg2.Wait()
+	appendResultsWaitGroup.Wait()
 	sort.Slice(results, func(i, j int) bool {
-		return results[i].Similarity < results[j].Similarity
+		return results[i].Similarity > results[j].Similarity
 	})
 
-	f, err := os.OpenFile("similarities.csv", os.O_CREATE|os.O_WRONLY, 0644)
+	err := internal.WriteResultsToFile("similarities.csv", results)
 	if err != nil {
-		fmt.Println("Could not create the file.")
-		os.Exit(1)
+		fmt.Println("Could not write to file. Writing here...")
+		internal.WriteResultsToStdout(results)
 	}
-	defer f.Close()
-	_, err = f.Write([]byte("tag1,tag2,similarity\n"))
-	if err != nil {
-		fmt.Println("Error in writing to file:", err)
-		os.Exit(1)
-	}
-	for _, result := range results {
-		temp := result.Tag1 + "," + result.Tag2 + "," + fmt.Sprintf("%f", result.Similarity) + "\n"
-		_, err := f.Write([]byte(temp))
-		if err != nil {
-			fmt.Println("Error in writing to file:", err)
-			os.Exit(1)
-		}
-	}
-	// for _, result := range results {
-	// 	fmt.Println(result.Tag1, result.Tag2, result.Similarity)
-	// }
+
 }
