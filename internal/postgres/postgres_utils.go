@@ -17,7 +17,7 @@ func GetDatabaseConn(url string) *pgx.Conn {
 	return conn
 }
 
-func RetrieveDataFromDatabase(conn *pgx.Conn, rowsCount int) (map[int]map[string]bool, map[string]bool) {
+func RetrieveDataFromDatabase(conn *pgx.Conn, rowsCount int) (map[int]map[string]bool, map[string]map[int]bool, map[string]bool) {
 	var rows pgx.Rows
 	var err error
 	if rowsCount == -1 {
@@ -30,7 +30,8 @@ func RetrieveDataFromDatabase(conn *pgx.Conn, rowsCount int) (map[int]map[string
 		os.Exit(1)
 	}
 
-	questions := make(map[int]map[string]bool)
+	questionsToTags := make(map[int]map[string]bool)
+	tagsToQuestions := make(map[string]map[int]bool)
 	allTags := make(map[string]bool)
 
 	var question_id int
@@ -39,10 +40,14 @@ func RetrieveDataFromDatabase(conn *pgx.Conn, rowsCount int) (map[int]map[string
 	for rows.Next() {
 		rows.Scan(&question_id, &tag)
 		allTags[tag] = true
-		if _, ok := questions[question_id]; !ok {
-			questions[question_id] = make(map[string]bool)
+		if _, ok := questionsToTags[question_id]; !ok {
+			questionsToTags[question_id] = make(map[string]bool)
 		}
-		questions[question_id][tag] = true
+		questionsToTags[question_id][tag] = true
+		if _, ok := tagsToQuestions[tag]; !ok {
+			tagsToQuestions[tag] = make(map[int]bool)
+		}
+		tagsToQuestions[tag][question_id] = true
 	}
-	return questions, allTags
+	return questionsToTags, tagsToQuestions, allTags
 }

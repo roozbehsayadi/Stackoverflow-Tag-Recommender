@@ -4,10 +4,12 @@ import (
 	"sync"
 )
 
-var questions map[int]map[string]bool
+var questionsToTags map[int]map[string]bool
+var tagsToQuestions map[string]map[int]bool
 
-func InitData(questionsIn map[int]map[string]bool) {
-	questions = questionsIn
+func InitData(questions map[int]map[string]bool, tags map[string]map[int]bool) {
+	questionsToTags = questions
+	tagsToQuestions = tags
 }
 
 func GetSimilarities(tags chan []string, result chan TagSimilarity, wg *sync.WaitGroup) {
@@ -16,11 +18,14 @@ func GetSimilarities(tags chan []string, result chan TagSimilarity, wg *sync.Wai
 		tag1 := currentTags[0]
 		tag2 := currentTags[1]
 		var either, both int
-		for _, tags := range questions {
-			if tags[tag1] && tags[tag2] {
+		for question, _ := range tagsToQuestions[tag1] {
+			if tagsToQuestions[tag2][question] {
 				both++
 			}
-			if tags[tag1] || tags[tag2] { // xor
+			either++
+		}
+		for question, _ := range tagsToQuestions[tag2] {
+			if !tagsToQuestions[tag1][question] {
 				either++
 			}
 		}

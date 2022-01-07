@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"math/rand"
-	"sort"
 	"stackoverflow-recommender/internal"
 	"stackoverflow-recommender/internal/postgres"
 	"stackoverflow-recommender/internal/similarity"
@@ -17,10 +15,12 @@ func main() {
 
 	conn := postgres.GetDatabaseConn(pgxUrl)
 	defer conn.Close(context.Background())
+	fmt.Println("Connected to database")
 
-	questions, allTags := postgres.RetrieveDataFromDatabase(conn, 100)
+	questionsToTags, tagsToQuestions, allTags := postgres.RetrieveDataFromDatabase(conn, -1)
+	fmt.Println("Retrieved and processed data from database")
 
-	similarity.InitData(questions)
+	similarity.InitData(questionsToTags, tagsToQuestions)
 
 	var allTagsAr []string
 	for key := range allTags {
@@ -46,30 +46,14 @@ func main() {
 		go similarity.GetSimilarities(allTagsChan, res, &calculationsWaitGroup)
 	}
 
-	results := []similarity.TagSimilarity{}
+	// results := []similarity.TagSimilarity{}
 	appendResultsWaitGroup.Add(1)
 	go func() {
 		defer appendResultsWaitGroup.Done()
-		for result := range res {
-			results = append(results, result)
-			if rand.Int()%1000 == 0 {
-				fmt.Printf("%f%%\n", float64(len(results))/float64(
-					len(allTagsAr)*(len(allTagsAr)-1)/2,
-				))
-			}
-		}
+		internal.WriteResultsToFile("similarities.csv", res, len(allTagsAr)*(len(allTagsAr)-1)/2)
 	}()
 	calculationsWaitGroup.Wait()
 	close(res)
 	appendResultsWaitGroup.Wait()
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].Similarity > results[j].Similarity
-	})
-
-	err := internal.WriteResultsToFile("similarities.csv", results)
-	if err != nil {
-		fmt.Println("Could not write to file. Writing here...")
-		internal.WriteResultsToStdout(results)
-	}
 
 }
