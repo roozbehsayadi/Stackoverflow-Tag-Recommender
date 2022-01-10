@@ -1,6 +1,6 @@
 # Recommender System with Stackoverflow's Data
 
-This project is written to recommend tags based on a provided one.
+This project is written to recommend tags based on data from stackoverflow.
 
 ## Running the Project
 
