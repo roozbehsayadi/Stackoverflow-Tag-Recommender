@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"sort"
 	"stackoverflow-recommender/internal"
 	"stackoverflow-recommender/internal/postgres"
 	"stackoverflow-recommender/internal/similarity"
@@ -17,10 +19,10 @@ func main() {
 	defer conn.Close(context.Background())
 	fmt.Println("Connected to database")
 
-	questionsToTags, tagsToQuestions, allTags := postgres.RetrieveDataFromDatabase(conn, -1)
+	tagsToQuestions, allTags := postgres.RetrieveDataFromDatabase(conn, -1)
 	fmt.Println("Retrieved and processed data from database")
 
-	similarity.InitData(questionsToTags, tagsToQuestions)
+	similarity.InitData(tagsToQuestions)
 
 	var allTagsAr []string
 	for key := range allTags {
@@ -39,21 +41,44 @@ func main() {
 	}()
 
 	res := make(chan (similarity.TagSimilarity))
+	processedAnAnswer := make(chan bool)
 	var calculationsWaitGroup, appendResultsWaitGroup sync.WaitGroup
 
 	for i := 0; i < 8; i++ {
 		calculationsWaitGroup.Add(1)
-		go similarity.GetSimilarities(allTagsChan, res, &calculationsWaitGroup)
+		go similarity.GetSimilarities(allTagsChan, res, processedAnAnswer, &calculationsWaitGroup)
 	}
 
-	// results := []similarity.TagSimilarity{}
+	results := []similarity.TagSimilarity{}
 	appendResultsWaitGroup.Add(1)
 	go func() {
 		defer appendResultsWaitGroup.Done()
-		internal.WriteResultsToFile("similarities.csv", res, len(allTagsAr)*(len(allTagsAr)-1)/2)
+		for result := range res {
+			results = append(results, result)
+		}
+		close(processedAnAnswer)
+	}()
+	appendResultsWaitGroup.Add(1)
+	go func() {
+		defer appendResultsWaitGroup.Done()
+		counter := 0
+		expectedNumberOfResults := len(allTagsAr) * (len(allTagsAr) - 1) / 2
+		for range processedAnAnswer {
+			counter++
+			if rand.Int()%5000 == 0 {
+				fmt.Printf("%f%%\n", 100*float64(counter)/float64(expectedNumberOfResults))
+			}
+		}
+		fmt.Println(100*float64(counter)/float64(expectedNumberOfResults), "%")
 	}()
 	calculationsWaitGroup.Wait()
 	close(res)
 	appendResultsWaitGroup.Wait()
+
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].Similarity > results[j].Similarity
+	})
+
+	internal.GenerateReports(results)
 
 }

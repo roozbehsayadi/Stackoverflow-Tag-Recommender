@@ -1,4 +1,4 @@
-package internal
+package file
 
 import (
 	"fmt"
@@ -7,8 +7,27 @@ import (
 	"stackoverflow-recommender/internal/similarity"
 )
 
+func WriteArrayTofile(address string, array []string) error {
+	f, err := os.OpenFile(address, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	for _, elem := range array {
+		if elem == "\n" {
+			_, err = f.Write([]byte("\n"))
+		} else {
+			_, err = f.Write([]byte(elem + " "))
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func WriteResultsToFile(address string, results chan similarity.TagSimilarity, expectedNumberOfResults int) error {
-	f, err := os.OpenFile("similarities.csv", os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(address, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
