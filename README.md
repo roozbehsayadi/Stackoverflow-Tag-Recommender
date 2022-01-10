@@ -10,4 +10,4 @@ This project is written to recommend tags based on a provided one.
 - Go to `cmd/similarity` folder and run the project.
   - `go build -o similarity.out`
   - `./similarity.out`
-- After the program is run, reports will be available in `cmd/similarity` folder.
+- After the program is run, reports will be available in `cmd/similarity` folder (as they are now).
