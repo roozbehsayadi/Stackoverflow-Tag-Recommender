@@ -21,9 +21,14 @@ func RetrieveDataFromDatabase(conn *pgx.Conn, rowsCount int) (map[string]map[int
 	var rows pgx.Rows
 	var err error
 	if rowsCount == -1 {
-		rows, err = conn.Query(context.Background(), "SELECT question_id, tag FROM question_tags")
+		rows, err = conn.Query(context.Background(),
+			"SELECT question_id, tag FROM questions LEFT OUTER JOIN question_tags ON questions.id = question_tags.question_id WHERE questions.closed_date IS NULL AND question_id IS NOT NULL",
+		)
 	} else {
-		rows, err = conn.Query(context.Background(), "SELECT question_id, tag FROM question_tags ORDER BY question_id LIMIT $1", rowsCount)
+		rows, err = conn.Query(context.Background(),
+			"SELECT question_id, tag FROM questions LEFT OUTER JOIN question_tags ON questions.id = question_tags.question_id WHERE questions.closed_date IS NULL AND question_id IS NOT NULL ORDER BY question_id LIMIT $1",
+			rowsCount,
+		)
 	}
 	if err != nil {
 		fmt.Println("Query was not sucessfull:", err)

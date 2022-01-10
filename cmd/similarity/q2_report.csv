@@ -1,4 +1,4 @@
 Tag1,Tag2,distance 
-spring,session,0.993080 
-nullpointerexception,dependency-injection,0.998869 
-static,regex,0.999927 
+session,spring,0.992975 
+nullpointerexception,dependency-injection,0.998776 
+static,regex,0.999921 
