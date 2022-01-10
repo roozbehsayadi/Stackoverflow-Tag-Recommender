@@ -11,7 +11,14 @@ import (
 	"sync"
 )
 
-const pgxUrl = "postgres://postgres:postgres@localhost:5432/stackoverflow_recommender"
+var (
+	dbUsername = "postgres"
+	dbPassword = "postgres"
+	dbHost     = "localhost"
+	dbPort     = "5432"
+	dbName     = "stackoverflow_recommender"
+	pgxUrl     = "postgres://" + dbUsername + ":" + dbPassword + "@" + dbHost + ":" + dbPort + "/" + dbName
+)
 
 func main() {
 

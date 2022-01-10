@@ -7,21 +7,6 @@ import (
 	"stackoverflow-recommender/internal/similarity"
 )
 
-var requiredTags map[string]bool
-
-func init() {
-	requiredTags = make(map[string]bool)
-	requiredTags["intellij-idea"] = true
-	requiredTags["jax-rs"] = true
-	requiredTags["user-interface"] = true
-	requiredTags["regex"] = true
-	requiredTags["static"] = true
-	requiredTags["session"] = true
-	requiredTags["spring"] = true
-	requiredTags["nullpointerexception"] = true
-	requiredTags["dependency-injection"] = true
-}
-
 func GenerateReports(results []similarity.TagSimilarity) {
 	fmt.Println("Generating report for Q1")
 	generateQ1Report(results)
